@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  # 1. Base de Datos (MariaDB v2.3.2)
+  db:
+    image: mariadb:10.6
+    container_name: itibb_db_prod
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: itibb_db
+    ports:
+      - "3310:3306" # Movido al 3310 para evitar al "fantasma" del 3307
+    volumes:
+      - ./backend/database_init.sql:/docker-entrypoint-initdb.d/init.sql
+      - itibb_final_data_v2:/var/lib/mysql # Nuevo volumen para forzar limpieza absoluta
+
+  # 2. Servidor API (Apache + PHP)
+  api:
+    build: .
+    container_name: itibb_api_prod
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./backend:/var/www/html/api
+    depends_on:
+      - db
+
+  # 3. Administrador Visual (phpMyAdmin)
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: itibb_admin_prod
+    restart: always
+    environment:
+      PMA_HOST: db
+      PMA_ARBITRARY: 1
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "8081:80"
+    depends_on:
+      - db
+
+volumes:
+  itibb_final_data_v2:
